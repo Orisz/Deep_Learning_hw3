@@ -23,10 +23,16 @@ def char_maps(text: str):
     #  It's best if you also sort the chars before assigning indices, so that
     #  they're in lexical order.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    # raise NotImplementedError()
     # ========================
-    return char_to_idx, idx_to_char
 
+    #all_words = sorted(list(set(text)))
+    all_words = [word for word in list(sorted(set(text)))]
+    char_to_idx = dict()
+    idx_to_char = dict()
+    idx_to_char = {i: all_words[i] for i in range(len(all_words))}
+    char_to_idx = {all_words[i]: i for i in range(len(all_words))}
+    return char_to_idx, idx_to_char
 
 def remove_chars(text: str, chars_to_remove):
     """
@@ -39,8 +45,18 @@ def remove_chars(text: str, chars_to_remove):
     """
     # TODO: Implement according to the docstring.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    # raise NotImplementedError()
     # ========================
+
+    all_words = text.split()
+    orig_num_words = len(all_words)
+    n_removed = sum([text.count(char) for char in chars_to_remove])
+    removed_chars_list = [char for char in chars_to_remove]
+    #idx = [1 if removed_chars_list.__contains__(word) else 0 for word in text]
+    text_clean = re.sub(r'{}'.format(removed_chars_list), '', text)
+    #text_clean = text[idx]
+    #n_removed = len(all_words) - len(text_clean)
+
     return text_clean, n_removed
 
 
@@ -59,8 +75,15 @@ def chars_to_onehot(text: str, char_to_idx: dict) -> Tensor:
     """
     # TODO: Implement the embedding.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    #raise NotImplementedError()
     # ========================
+
+    num_chars = len(char_to_idx.keys())
+    #prep = [[1 if idx == char_to_idx[c] else 0 for idx in range(num_chars)] for c in text]
+    #prep = [[1 if idx == char_to_idx[word] else 0 for idx in range(len(char_to_idx.keys()))] for word in text]
+    #one_hot_dict = [[1 if j == i else 0 for j in range(num_chars)] for i in range(num_chars)]
+    prep = [[1 if j == char_to_idx[word] else 0 for j in range(num_chars)] for word in text]
+    result = torch.tensor(prep, dtype=torch.int8)
     return result
 
 
@@ -76,8 +99,12 @@ def onehot_to_chars(embedded_text: Tensor, idx_to_char: dict) -> str:
     """
     # TODO: Implement the reverse-embedding.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    # raise NotImplementedError()
     # ========================
+    length = embedded_text.shape[0]
+    keys = [embedded_text[i].argmax(-1).item() for i in range(length)]
+    words = [idx_to_char[key] for key in keys]
+    result = ''.join(words)
     return result
 
 
@@ -106,8 +133,27 @@ def chars_to_labelled_samples(text: str, char_to_idx: dict, seq_len: int,
     #  3. Create the labels tensor in a similar way and convert to indices.
     #  Note that no explicit loops are required to implement this function.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    # raise NotImplementedError()
     # ========================
+    #defining the sizes
+    num_chars = text.__len__() - 1
+    V = len(char_to_idx)
+    S = seq_len
+    N = num_chars // seq_len
+
+    #calc the onehot
+    embedded = chars_to_onehot(text, char_to_idx)
+
+    samples = embedded[:N * S]
+    samples = samples.view(N, S, V)
+    samples = samples.to(device)
+
+    #the labels are the same, just one step further and with max
+    labels = embedded[1: N * S + 1]
+    labels = torch.argmax(labels, dim=1)
+    labels = labels.view(N, S)
+    labels = labels.to(device)
+
     return samples, labels
 
 
@@ -189,9 +235,25 @@ class SequenceBatchSampler(torch.utils.data.Sampler):
         #  In the case when the last batch can't have batch_size samples,
         #  you can drop it.
         idx = None  # idx should be a 1-d list of indices.
+        idx = []
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # raise NotImplementedError()
         # ========================
+        tot_len = len(self.dataset)
+        num_batchs = tot_len // self.batch_size
+        idx = [i for i in range(num_batchs*self.batch_size)]
+        """""
+        num_samples = len(self.dataset) / sample_len
+        #idx = []
+        for i in range(num_batchs):
+            j = 0
+            #while j*sample_len < len(self.dataset):
+            for j in range(num_samples):
+                idx.append(j*sample_len + i*self.batch_size)
+                #j = j + sample_len
+
+        #idx = [i*num_samples_per_batch for i in range(num_samples_per_batch)]
+        """
         return iter(idx)
 
     def __len__(self):
