@@ -437,3 +437,5 @@ model = MultilayerGRU(in_dim, h_dim, out_dim=in_dim, n_layers=n_layers)
 model.
 model = model.to(device)
 """""
+
+#nn.CrossEntropyLoss()

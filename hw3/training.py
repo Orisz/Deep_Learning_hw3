@@ -72,12 +72,35 @@ class Trainer(abc.ABC):
                     saved_state.get('ewi', epochs_without_improvement)
                 self.model.load_state_dict(saved_state['model_state'])
 
+        early_stopping_counter = 0
         for epoch in range(num_epochs):
             save_checkpoint = False
             verbose = False  # pass this to train/test_epoch.
             if epoch % print_every == 0 or epoch == num_epochs - 1:
                 verbose = True
             self._print(f'--- EPOCH {epoch+1}/{num_epochs} ---', verbose)
+
+            actual_num_epochs += 1
+            train_res = self.train_epoch(dl_train=dl_train, **kw)
+            tr_loss = torch.tensor(train_res.losses).mean().item()
+            tr_acc = train_res.accuracy
+            train_loss.append(tr_loss)
+            train_acc.append(tr_acc)
+
+            test_res = self.test_epoch(dl_test=dl_test, **kw)
+            te_loss = torch.tensor(test_res.losses).mean().item()
+            te_acc = test_res.accuracy
+            test_loss.append(te_loss)
+            test_acc.append(te_acc)
+
+            curr_loss = test_loss[-1]
+            best_loss = min(test_loss[:-1]) if len(test_loss) >= 2 else 1e3
+            if early_stopping and (curr_loss > best_loss):
+                epochs_without_improvement += 1
+                if epochs_without_improvement >= early_stopping:
+                    break
+            else:
+                epochs_without_improvement = 0
 
             # TODO:
             #  Train & evaluate for one epoch
@@ -86,7 +109,7 @@ class Trainer(abc.ABC):
             #  - Implement early stopping. This is a very useful and
             #    simple regularization technique that is highly recommended.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            # raise NotImplementedError()
             # ========================
 
             # Save model checkpoint if requested
@@ -208,15 +231,17 @@ class RNNTrainer(Trainer):
     def train_epoch(self, dl_train: DataLoader, **kw):
         # TODO: Implement modifications to the base method, if needed.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        #raise NotImplementedError()
         # ========================
+        self.hidden = None
         return super().train_epoch(dl_train, **kw)
 
     def test_epoch(self, dl_test: DataLoader, **kw):
         # TODO: Implement modifications to the base method, if needed.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        #raise NotImplementedError()
         # ========================
+        self.hidden = None
         return super().test_epoch(dl_test, **kw)
 
     def train_batch(self, batch) -> BatchResult:
@@ -233,9 +258,32 @@ class RNNTrainer(Trainer):
         #  - Update params
         #  - Calculate number of correct char predictions
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # raise NotImplementedError()
         # ========================
+        """
+        optimizer.zero_grad()
+        output = model(input)
+        loss = loss_fn(output, target)
+        loss.backward()
+        optimizer.step()
+        """
 
+        # the regular order of train
+        self.optimizer.zero_grad()
+        y_pred, h_pred = self.model(x, self.hidden)
+        y_pred = y_pred.permute(0, 2, 1)
+        loss = self.loss_fn(y_pred, y)
+        loss.backward()
+        self.optimizer.step()
+
+        #calculating what we need
+        y_pred = y_pred.argmax(dim=1)
+        num_correct = torch.sum((y == y_pred))
+
+        #in this case we need to update the hidden states
+        self.hidden = h_pred
+        self.hidden = self.hidden.detach()
+        self.hidden.requires_grad = False
         # Note: scaling num_correct by seq_len because each sample has seq_len
         # different predictions.
         return BatchResult(loss.item(), num_correct.item() / seq_len)
@@ -253,9 +301,23 @@ class RNNTrainer(Trainer):
             #  - Loss calculation
             #  - Calculate number of correct predictions
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            #raise NotImplementedError()
             # ========================
+            #self.optimizer.zero_grad()
+            y_pred, h_pred = self.model(x, self.hidden)
+            y_pred = y_pred.permute(0, 2, 1)
+            loss = self.loss_fn(y_pred, y)
+            #loss.backward()
+            #self.optimizer.step()
 
+            # calculating what we need
+            y_pred = y_pred.argmax(dim=1)
+            num_correct = torch.sum((y == y_pred))
+
+            # in this case we need to update the hidden states
+            self.hidden = h_pred
+            self.hidden = self.hidden.detach()
+            self.hidden.requires_grad = False
         return BatchResult(loss.item(), num_correct.item() / seq_len)
 
 

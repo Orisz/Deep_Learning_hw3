@@ -10,77 +10,64 @@ math (delimited with $$).
 
 def part1_rnn_hyperparams():
     hypers = dict(
-        batch_size=0, seq_len=0,
-        h_dim=0, n_layers=0, dropout=0,
-        learn_rate=0.0, lr_sched_factor=0.0, lr_sched_patience=0,
+        batch_size=10, seq_len=5,
+        h_dim=2, n_layers=3, dropout=0.5,
+        learn_rate=0.01, lr_sched_factor=0.01, lr_sched_patience=0,
     )
     # TODO: Set the hyperparameters to train the model.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    #raise NotImplementedError()
     # ========================
     return hypers
 
 
 def part1_generation_params():
-    start_seq = ""
-    temperature = .0001
+    #start_seq = ""
+    #temperature = .0001
     # TODO: Tweak the parameters to generate a literary masterpiece.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    # raise NotImplementedError()
     # ========================
+    start_seq, temperature = "[]", 0.78
     return start_seq, temperature
 
 
 part1_q1 = r"""
-**Your answer:**
-
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
-
+In this model we want the network to be able to see the connection of the words through time.
+If we used the whole text, the sequence would be really long, and that would make it harder, and probably
+very difficult for out network to observe the connection between the begging of the text to it's end.
+And so, using shorter sequences helps to deal with this problem.   
 """
 
 part1_q2 = r"""
-**Your answer:**
-
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
-
+Our network's architecture is built so that between 2 batches the hidden states remain,
+and so they act as a kind of memory.
+Thus the memory is longer than the sequence length.
 """
 
 part1_q3 = r"""
-**Your answer:**
-
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
-
+There is a meaning to the order of the words.
+The order of the words in a text is what gives the text it's meaning.
+And so, shuffling the order of the words in a sentence could change it completely.
+As we said in Q2, the hidden states are the memory of the system,
+and so if we shuffle the order of the batches we would cause the memory to be useless.
 """
 
 part1_q4 = r"""
-**Your answer:**
+1. We want to prevent overfitting when we train out model, and temperature=1.0 is helps us do that.
+It gives some "randomness" to our model, which helps the training process.
+When we sample the model, we want lower variance, so the words that the out model produces would be connected 
+to the words who came before them.
 
+2. Using a high temperatures got us a lot of gibberish and spelling errors, and got us a pretty random text.
+This could be explained mathematically, when T is high than (for every k):
+    exp(y_k/t)=~exp(y/T)=~exp(0)==1.
+This means that we will get a uniform probability to all the possible characters,
+which really would make a random text. 
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
-
+3. Using a low temperatures got us diffrent results from the last question.
+We didn't get any mistakes, but there are a lot of repeating phrases.
+It seems like here the variance is low, so we choose words based on how common they are in our text.
 """
 # ==============
 
