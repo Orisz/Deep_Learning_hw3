@@ -168,8 +168,10 @@ def hot_softmax(y, dim=0, temperature=1.0):
     """
     # TODO: Implement based on the above.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    # raise NotImplementedError()
     # ========================
+    y_temp = (1.0 / temperature) * y
+    result = nn.functional.softmax(y_temp, dim)
     return result
 
 
@@ -204,8 +206,31 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
     #  necessary for this. Best to disable tracking for speed.
     #  See torch.no_grad().
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    # raise NotImplementedError()
     # ========================
+    with torch.no_grad():
+        h = None
+        # We need to change the input into onehot first, the first input
+        x_input = chars_to_onehot(out_text, char_to_idx)
+
+        while len(out_text) < n_chars:
+            x_input.to(device)
+            x_input = x_input.unsqueeze(0)
+
+            # feeding into the model
+            y, h = model(x_input.to(dtype=torch.float), h)
+
+            # converting the probs, of the last layer
+            soft_y = hot_softmax(y[0, -1, :], 0, T)
+
+            # sampling as suggested
+            nom_y = torch.multinomial(soft_y, 1)
+
+            char = idx_to_char[nom_y.item()]
+            out_text += char
+
+            #prepering the next input
+            x_input = chars_to_onehot(char, char_to_idx)
 
     return out_text
 
@@ -282,6 +307,36 @@ class MultilayerGRU(nn.Module):
         self.n_layers = n_layers
         self.layer_params = []
 
+        self.layer_params.append((nn.Tanh(), nn.Sigmoid(),
+                                  nn.Linear(in_dim, 1, bias=True),
+                                  nn.Linear(h_dim, 1, bias=False),
+                                  nn.Linear(in_dim, 1, bias=True),
+                                  nn.Linear(h_dim, 1, bias=False),
+                                  nn.Linear(in_dim, h_dim, bias=True),
+                                  nn.Linear(h_dim, h_dim, bias=False),
+                                  nn.Dropout(dropout)))
+
+        for _ in range(self.n_layers - 1):
+            self.layer_params.append((nn.Tanh(), nn.Sigmoid(),
+                                      nn.Linear(h_dim, 1, bias=True),
+                                      nn.Linear(h_dim, 1, bias=False),
+                                      nn.Linear(h_dim, 1, bias=True),
+                                      nn.Linear(h_dim, 1, bias=False),
+                                      nn.Linear(h_dim, h_dim, bias=True),
+                                      nn.Linear(h_dim, h_dim, bias=False),
+                                      nn.Dropout(dropout)))
+
+        i = 0
+        for l in self.layer_params:
+            if type(l) == tuple:
+                for param in l:
+                    self.add_module(str(i), param)
+                    i += 1
+            else:
+                self.add_module(str(i), l)
+
+        self.affine = nn.Linear(h_dim, out_dim, bias=True)
+
         # TODO: Create the parameters of the model for all layers.
         #  To implement the affine transforms you can use either nn.Linear
         #  modules (recommended) or create W and b tensor pairs directly.
@@ -298,8 +353,9 @@ class MultilayerGRU(nn.Module):
         #      then call self.register_parameter() on them. Also make
         #      sure to initialize them. See functions in torch.nn.init.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        #raise NotImplementedError()
         # ========================
+
 
     def forward(self, input: Tensor, hidden_state: Tensor = None):
         """
@@ -329,12 +385,55 @@ class MultilayerGRU(nn.Module):
         layer_input = input
         layer_output = None
 
+
         # TODO:
         #  Implement the model's forward pass.
         #  You'll need to go layer-by-layer from bottom to top (see diagram).
         #  Tip: You can use torch.stack() to combine multiple tensors into a
         #  single tensor in a differentiable manner.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # raise NotImplementedError()
         # ========================
+        for layer in self.layer_params:
+            for l in layer:
+                l.to(input.device)
+
+        self.affine.to(input.device)
+        layer_output = torch.zeros_like(layer_input)
+
+        for seq in range(seq_len):
+            x = layer_input[:, seq, :]
+            for k in range(self.n_layers):
+                h = layer_states[k].clone()
+                try:
+                    z = self.layer_params[k][1](
+                        self.layer_params[k][2](x) + self.layer_params[k][3](h))
+                except Exception:
+                    z = self.layer_params[k][1](
+                        self.layer_params[k][2](x) + self.layer_params[k][3](h))
+                r = self.layer_params[k][1](
+                    self.layer_params[k][4](x) + self.layer_params[k][5](h))
+                g = self.layer_params[k][0](self.layer_params[k][6](x) + self.layer_params[k][7](
+                    r * h))
+
+                h = h * z + (1 - z) * g
+
+                layer_states[k] = h
+
+                x = self.layer_params[k][8](h)
+
+                #if layer_output is None:
+                #    layer_output = torch.zeros_like(layer_input)
+
+                layer_output[:, seq, :] = self.affine(x)
+        hidden_state = torch.stack(layer_states, 1)
+
         return layer_output, hidden_state
+
+
+
+"""""
+model = MultilayerGRU(in_dim, h_dim, out_dim=in_dim, n_layers=n_layers)
+model.
+model = model.to(device)
+"""""
