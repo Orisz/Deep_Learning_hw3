@@ -19,8 +19,24 @@ class EncoderCNN(nn.Module):
         #  use pooling or only strides, use any activation functions,
         #  use BN or Dropout, etc.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        #raise NotImplementedError()
         # ========================
+        modules.append(
+            nn.Conv2d(in_channels=in_channels, out_channels=64, kernel_size=(3, 3), padding=2, stride=2, bias=False))
+        modules.append(nn.BatchNorm2d(64))
+        modules.append(nn.ReLU())
+        modules.append(nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3, 3), padding=2, stride=2, bias=False))
+        modules.append(nn.BatchNorm2d(128))
+        modules.append(nn.ReLU())
+        modules.append(
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(3, 3), padding=2, stride=2, bias=False))
+        modules.append(nn.BatchNorm2d(256))
+        modules.append(nn.ReLU())
+        #modules.append(nn.Dropout(0.4))
+        modules.append(
+            nn.Conv2d(in_channels=256, out_channels=out_channels, kernel_size=(3, 3), padding=2, stride=2, bias=False))
+        # ========================
+        self.cnn = nn.Sequential(*modules)
         self.cnn = nn.Sequential(*modules)
 
     def forward(self, x):
@@ -42,8 +58,26 @@ class DecoderCNN(nn.Module):
         #  output should be a batch of images, with same dimensions as the
         #  inputs to the Encoder were.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # raise NotImplementedError()
         # ========================
+        modules.append(
+            nn.ConvTranspose2d(in_channels=in_channels, out_channels=256, kernel_size=(3, 3), padding=2, stride=2,
+                               bias=False, output_padding=1))
+        modules.append(nn.BatchNorm2d(256))
+        modules.append(nn.ReLU())
+        modules.append(
+            nn.ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=(3, 3), padding=2, stride=2, bias=False,
+                               output_padding=1))
+        modules.append(nn.BatchNorm2d(128))
+        modules.append(nn.ReLU())
+        modules.append(
+            nn.ConvTranspose2d(in_channels=128, out_channels=32, kernel_size=(3, 3), padding=2, stride=2, bias=False,
+                               output_padding=1))
+        modules.append(nn.BatchNorm2d(32))
+        modules.append(nn.ReLU())
+        modules.append(
+            nn.ConvTranspose2d(in_channels=32, out_channels=out_channels, kernel_size=(3, 3), padding=3, stride=2,
+                               bias=False, output_padding=1))
         self.cnn = nn.Sequential(*modules)
 
     def forward(self, h):
@@ -91,9 +125,9 @@ class VAE(nn.Module):
         #     log_sigma2 (mean and log variance) of q(Z|x).
         #  2. Apply the reparametrization trick to obtain z.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # raise NotImplementedError()
         # ========================
-
+        feature_vec = 
         return z, mu, log_sigma2
 
     def decode(self, z):
