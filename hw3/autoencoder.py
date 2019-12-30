@@ -102,9 +102,14 @@ class VAE(nn.Module):
 
         self.features_shape, n_features = self._check_features(in_size)
 
+        self.n_features = n_features
+        self.for_mean = nn.Linear(in_features=n_features, out_features=z_dim, bias=True)
+        self.for_std = nn.Linear(in_features=n_features, out_features=z_dim, bias=True)
+        self.pro = nn.Linear(in_features=z_dim, out_features=n_features)
+
         # TODO: Add more layers as needed for encode() and decode().
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # raise NotImplementedError()
         # ========================
 
     def _check_features(self, in_size):
@@ -127,7 +132,15 @@ class VAE(nn.Module):
         # ====== YOUR CODE: ======
         # raise NotImplementedError()
         # ========================
-        feature_vec = 
+        device = next(self.parameters()).device
+        x = x.to(device)
+        h = self.features_encoder(x)
+        h = h.view(-1, self.n_features)
+        mu = self.for_mean(h)
+        log_sigma2 = self.for_std(h)
+        std = log_sigma2.exp_()
+        z = torch.randn(std.size()).to(device) * std.to(device)
+        z += mu.to(device)
         return z, mu, log_sigma2
 
     def decode(self, z):
@@ -136,10 +149,16 @@ class VAE(nn.Module):
         #  1. Convert latent z to features h with a linear layer.
         #  2. Apply features decoder.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        #raise NotImplementedError()
         # ========================
 
         # Scale to [-1, 1] (same dynamic range as original images).
+        device = next(self.parameters()).device
+        z = z.to(device)
+        features = self.pro(z)
+        # Scaling as instructed
+        features = features.view(-1, self.features_shape[0], self.features_shape[1], self.features_shape[2])
+        x_rec = self.features_decoder(features)
         return torch.tanh(x_rec)
 
     def sample(self, n):
@@ -185,7 +204,23 @@ def vae_loss(x, xr, z_mu, z_log_sigma2, x_sigma2):
     #  1. The covariance matrix of the posterior is diagonal.
     #  2. You need to average over the batch dimension.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    # raise NotImplementedError()
     # ========================
+
+    #turning both x and xr into vectors
+    x = x.view(x.size(0), -1)
+    xr = xr.view(xr.size(0), -1)
+
+    data_loss = (((x - xr) ** 2).sum(dim=1))
+    data_loss = data_loss / x_sigma2
+
+    kldiv_loss = z_log_sigma2.exp().sum(dim=1) + (z_mu ** 2).sum(dim=1) - z_mu.size(1) - z_log_sigma2.sum(dim=1)
+
+    data_loss = data_loss.mean()
+    #normilizing as intructed
+    data_loss = data_loss / x.size(1)
+    kldiv_loss = kldiv_loss.mean()
+
+    loss = data_loss + kldiv_loss
 
     return loss, data_loss, kldiv_loss
