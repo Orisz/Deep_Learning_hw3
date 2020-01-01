@@ -48,12 +48,16 @@ def remove_chars(text: str, chars_to_remove):
     # raise NotImplementedError()
     # ========================
 
-    all_words = text.split()
-    orig_num_words = len(all_words)
-    n_removed = sum([text.count(char) for char in chars_to_remove])
-    removed_chars_list = [char for char in chars_to_remove]
+    #all_words = text.split()
+    #orig_num_words = len(all_words)
+    #n_removed = sum([text.count(char) for char in chars_to_remove])
+    #removed_chars_list = [char for char in chars_to_remove]
     #idx = [1 if removed_chars_list.__contains__(word) else 0 for word in text]
-    text_clean = re.sub(r'{}'.format(removed_chars_list), '', text)
+    rx = '[' + re.escape(''.join(chars_to_remove)) + ']'
+    result = re.subn(rx, '', text)
+#     result = re.subn(f'{chars_to_remove}', '', text)
+    text_clean = result[0]
+    n_removed = result[1]
     #text_clean = text[idx]
     #n_removed = len(all_words) - len(text_clean)
 
@@ -143,13 +147,12 @@ def chars_to_labelled_samples(text: str, char_to_idx: dict, seq_len: int,
 
     #calc the onehot
     embedded = chars_to_onehot(text, char_to_idx)
-
-    samples = embedded[:N * S]
+    samples = embedded[:N * S, :]
     samples = samples.view(N, S, V)
     samples = samples.to(device)
 
     #the labels are the same, just one step further and with max
-    labels = embedded[1: N * S + 1]
+    labels = embedded[1: N * S + 1, :]
     labels = torch.argmax(labels, dim=1)
     labels = labels.view(N, S)
     labels = labels.to(device)
@@ -266,7 +269,8 @@ class SequenceBatchSampler(torch.utils.data.Sampler):
         # ========================
         tot_len = len(self.dataset)
         num_batchs = tot_len // self.batch_size
-        idx = [i for i in range(num_batchs*self.batch_size)]
+#         idx = [i for i in range(num_batchs*self.batch_size)]
+        idx = [i*num_batchs + j for j in range(num_batchs) for i in range(self.batch_size)]
         """""
         num_samples = len(self.dataset) / sample_len
         #idx = []
@@ -403,29 +407,28 @@ class MultilayerGRU(nn.Module):
 
         for seq in range(seq_len):
             x = layer_input[:, seq, :]
-            for k in range(self.n_layers):
-                h = layer_states[k].clone()
-                try:
-                    z = self.layer_params[k][1](
-                        self.layer_params[k][2](x) + self.layer_params[k][3](h))
-                except Exception:
-                    z = self.layer_params[k][1](
-                        self.layer_params[k][2](x) + self.layer_params[k][3](h))
-                r = self.layer_params[k][1](
-                    self.layer_params[k][4](x) + self.layer_params[k][5](h))
-                g = self.layer_params[k][0](self.layer_params[k][6](x) + self.layer_params[k][7](
-                    r * h))
+            for layer_num in range(self.n_layers):
+                h = layer_states[layer_num].clone()
+                
+                z = self.layer_params[layer_num][2](x)    # x_t * Wxz
+                z += self.layer_params[layer_num][3](h)   # + h_t-1*Whz
+                z = self.layer_params[layer_num][1](z)    # Sigmoid(.)
+                
+                r = self.layer_params[layer_num][4](x)    # x_t * Wxr
+                r += self.layer_params[layer_num][5](h)   # + h_t-1*Whr
+                r = self.layer_params[layer_num][1](r)    # Sigmoid(.)
+                
+                g = self.layer_params[layer_num][6](x)     # x_t * Wxg
+                g += self.layer_params[layer_num][7](r * h)# + (r_t * h_t-1) * Whg
+                g = self.layer_params[layer_num][0](g)     # Tanh(.)
 
-                h = h * z + (1 - z) * g
+                h = h * z + (1 - z) * g                    #update state
 
-                layer_states[k] = h
+                layer_states[layer_num] = h                #keep state for later
 
-                x = self.layer_params[k][8](h)
+                x = self.layer_params[layer_num][8](h)     # Dropout
 
-                #if layer_output is None:
-                #    layer_output = torch.zeros_like(layer_input)
-
-                layer_output[:, seq, :] = self.affine(x)
+                layer_output[:, seq, :] = self.affine(x)   #adjust to output dim
         hidden_state = torch.stack(layer_states, 1)
 
         return layer_output, hidden_state
