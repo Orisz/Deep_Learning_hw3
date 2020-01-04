@@ -80,14 +80,14 @@ def chars_to_onehot(text: str, char_to_idx: dict) -> Tensor:
     # TODO: Implement the embedding.
     # ====== YOUR CODE: ======
     #raise NotImplementedError()
+    result = torch.zeros(len(text),len(char_to_idx.keys()),dtype=torch.int8)
+    for idx,char in enumerate(text):
+        result[idx][char_to_idx[char]] = 1
     # ========================
 
-    num_chars = len(char_to_idx.keys())
-    #prep = [[1 if idx == char_to_idx[c] else 0 for idx in range(num_chars)] for c in text]
-    #prep = [[1 if idx == char_to_idx[word] else 0 for idx in range(len(char_to_idx.keys()))] for word in text]
-    #one_hot_dict = [[1 if j == i else 0 for j in range(num_chars)] for i in range(num_chars)]
-    prep = [[1 if j == char_to_idx[word] else 0 for j in range(num_chars)] for word in text]
-    result = torch.tensor(prep, dtype=torch.int8)
+#     num_chars = len(char_to_idx.keys())
+#     prep = [[1 if j == char_to_idx[word] else 0 for j in range(num_chars)] for word in text]
+#     result = torch.tensor(prep, dtype=torch.int8)
     return result
 
 
@@ -312,20 +312,20 @@ class MultilayerGRU(nn.Module):
         self.layer_params = []
 
         self.layer_params.append((nn.Tanh(), nn.Sigmoid(),
-                                  nn.Linear(in_dim, 1, bias=True),
-                                  nn.Linear(h_dim, 1, bias=False),
-                                  nn.Linear(in_dim, 1, bias=True),
-                                  nn.Linear(h_dim, 1, bias=False),
+                                  nn.Linear(in_dim, h_dim, bias=True),
+                                  nn.Linear(h_dim, h_dim, bias=False),
+                                  nn.Linear(in_dim, h_dim, bias=True),
+                                  nn.Linear(h_dim, h_dim, bias=False),
                                   nn.Linear(in_dim, h_dim, bias=True),
                                   nn.Linear(h_dim, h_dim, bias=False),
                                   nn.Dropout(dropout)))
 
         for _ in range(self.n_layers - 1):
             self.layer_params.append((nn.Tanh(), nn.Sigmoid(),
-                                      nn.Linear(h_dim, 1, bias=True),
-                                      nn.Linear(h_dim, 1, bias=False),
-                                      nn.Linear(h_dim, 1, bias=True),
-                                      nn.Linear(h_dim, 1, bias=False),
+                                      nn.Linear(h_dim, h_dim, bias=True),
+                                      nn.Linear(h_dim, h_dim, bias=False),
+                                      nn.Linear(h_dim, h_dim, bias=True),
+                                      nn.Linear(h_dim, h_dim, bias=False),
                                       nn.Linear(h_dim, h_dim, bias=True),
                                       nn.Linear(h_dim, h_dim, bias=False),
                                       nn.Dropout(dropout)))

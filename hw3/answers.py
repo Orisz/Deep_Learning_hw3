@@ -10,9 +10,9 @@ math (delimited with $$).
 
 def part1_rnn_hyperparams():
     hypers = dict(
-        batch_size=10, seq_len=5,
-        h_dim=2, n_layers=3, dropout=0.5,
-        learn_rate=0.01, lr_sched_factor=0.01, lr_sched_patience=0,
+        batch_size=256, seq_len=64,
+        h_dim=512, n_layers=3, dropout=0.5,
+        learn_rate=0.001, lr_sched_factor=0.5, lr_sched_patience=2,
     )
     # TODO: Set the hyperparameters to train the model.
     # ====== YOUR CODE: ======
@@ -28,14 +28,14 @@ def part1_generation_params():
     # ====== YOUR CODE: ======
     # raise NotImplementedError()
     # ========================
-    start_seq, temperature = "[]", 0.78
+    start_seq, temperature = "ACT I.", 0.5
     return start_seq, temperature
 
 
 part1_q1 = r"""
 In this model we want the network to be able to see the connection of the words through time.
 If we used the whole text, the sequence would be really long, and that would make it harder, and probably
-very difficult for out network to observe the connection between the begging of the text to it's end.
+very difficult for out network to observe the connection between the begining of the text to it's end.
 And so, using shorter sequences helps to deal with this problem.   
 """
 
@@ -48,7 +48,7 @@ Thus the memory is longer than the sequence length.
 part1_q3 = r"""
 There is a meaning to the order of the words.
 The order of the words in a text is what gives the text it's meaning.
-And so, shuffling the order of the words in a sentence could change it completely.
+And so, shuffling the order of the batches means some shuffling in sentences words, so meaning would change completely.
 As we said in Q2, the hidden states are the memory of the system,
 and so if we shuffle the order of the batches we would cause the memory to be useless.
 """
@@ -61,7 +61,7 @@ to the words who came before them.
 
 2. Using a high temperatures got us a lot of gibberish and spelling errors, and got us a pretty random text.
 This could be explained mathematically, when T is high than (for every k):
-    exp(y_k/t)=~exp(y/T)=~exp(0)==1.
+    exp(y_k/t)=\~exp(y/T)=\~exp(0)==1.
 This means that we will get a uniform probability to all the possible characters,
 which really would make a random text. 
 
