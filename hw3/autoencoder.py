@@ -22,21 +22,20 @@ class EncoderCNN(nn.Module):
         #raise NotImplementedError()
         # ========================
         modules.append(
-            nn.Conv2d(in_channels=in_channels, out_channels=64, kernel_size=(3, 3), padding=2, stride=2, bias=False))
+            nn.Conv2d(in_channels=in_channels, out_channels=64, kernel_size=5, padding=2, stride=2, bias=False))
         modules.append(nn.BatchNorm2d(64))
         modules.append(nn.ReLU())
-        modules.append(nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3, 3), padding=2, stride=2, bias=False))
+        modules.append(
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=5, padding=2, stride=2, bias=False))
         modules.append(nn.BatchNorm2d(128))
         modules.append(nn.ReLU())
         modules.append(
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(3, 3), padding=2, stride=2, bias=False))
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=5, padding=2, stride=2, bias=False))
         modules.append(nn.BatchNorm2d(256))
         modules.append(nn.ReLU())
-        #modules.append(nn.Dropout(0.4))
         modules.append(
-            nn.Conv2d(in_channels=256, out_channels=out_channels, kernel_size=(3, 3), padding=2, stride=2, bias=False))
+            nn.Conv2d(in_channels=256, out_channels=out_channels, kernel_size=5, padding=2, stride=2, bias=False))
         # ========================
-        self.cnn = nn.Sequential(*modules)
         self.cnn = nn.Sequential(*modules)
 
     def forward(self, x):
@@ -59,25 +58,26 @@ class DecoderCNN(nn.Module):
         #  inputs to the Encoder were.
         # ====== YOUR CODE: ======
         # raise NotImplementedError()
-        # ========================
         modules.append(
-            nn.ConvTranspose2d(in_channels=in_channels, out_channels=256, kernel_size=(3, 3), padding=2, stride=2,
+            nn.ConvTranspose2d(in_channels=in_channels, out_channels=256, kernel_size=5, padding=2, stride=2,
                                bias=False, output_padding=1))
         modules.append(nn.BatchNorm2d(256))
         modules.append(nn.ReLU())
         modules.append(
-            nn.ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=(3, 3), padding=2, stride=2, bias=False,
+            nn.ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=5, padding=2, stride=2, bias=False,
                                output_padding=1))
         modules.append(nn.BatchNorm2d(128))
         modules.append(nn.ReLU())
         modules.append(
-            nn.ConvTranspose2d(in_channels=128, out_channels=32, kernel_size=(3, 3), padding=2, stride=2, bias=False,
+            nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=5, padding=2, stride=2, bias=False,
                                output_padding=1))
-        modules.append(nn.BatchNorm2d(32))
+        modules.append(nn.BatchNorm2d(64))
         modules.append(nn.ReLU())
         modules.append(
-            nn.ConvTranspose2d(in_channels=32, out_channels=out_channels, kernel_size=(3, 3), padding=3, stride=2,
+            nn.ConvTranspose2d(in_channels=64, out_channels=out_channels, kernel_size=5, padding=2, stride=2,
                                bias=False, output_padding=1))
+        # ========================
+        
         self.cnn = nn.Sequential(*modules)
 
     def forward(self, h):
@@ -102,14 +102,13 @@ class VAE(nn.Module):
 
         self.features_shape, n_features = self._check_features(in_size)
 
-        self.n_features = n_features
-        self.for_mean = nn.Linear(in_features=n_features, out_features=z_dim, bias=True)
-        self.for_std = nn.Linear(in_features=n_features, out_features=z_dim, bias=True)
-        self.pro = nn.Linear(in_features=z_dim, out_features=n_features)
-
         # TODO: Add more layers as needed for encode() and decode().
         # ====== YOUR CODE: ======
         # raise NotImplementedError()
+        self.n_features = n_features
+        self.for_mean = nn.Linear(in_features=n_features, out_features=z_dim, bias=True)
+        self.for_sigma = nn.Linear(in_features=n_features, out_features=z_dim, bias=True)
+        self.back_project = nn.Linear(in_features=z_dim, out_features=n_features)
         # ========================
 
     def _check_features(self, in_size):
@@ -137,9 +136,9 @@ class VAE(nn.Module):
         h = self.features_encoder(x)
         h = h.view(-1, self.n_features)
         mu = self.for_mean(h)
-        log_sigma2 = self.for_std(h)
-        std = log_sigma2.exp_()
-        z = torch.randn(std.size()).to(device) * std.to(device)
+        log_sigma2 = self.for_sigma(h)
+        sigma2 = log_sigma2.exp()
+        z = torch.randn(sigma2.size()).to(device) * sigma2.to(device)
         z += mu.to(device)
         return z, mu, log_sigma2
 
@@ -150,15 +149,14 @@ class VAE(nn.Module):
         #  2. Apply features decoder.
         # ====== YOUR CODE: ======
         #raise NotImplementedError()
+        device = next(self.parameters()).device
+        z = z.to(device)
+        features = self.back_project(z)
+        features = features.view(-1, *self.features_shape)
+        x_rec = self.features_decoder(features)
         # ========================
 
         # Scale to [-1, 1] (same dynamic range as original images).
-        device = next(self.parameters()).device
-        z = z.to(device)
-        features = self.pro(z)
-        # Scaling as instructed
-        features = features.view(-1, self.features_shape[0], self.features_shape[1], self.features_shape[2])
-        x_rec = self.features_decoder(features)
         return torch.tanh(x_rec)
 
     def sample(self, n):
@@ -174,7 +172,9 @@ class VAE(nn.Module):
             #  Instead of sampling from N(psi(z), sigma2 I), we'll just take
             #  the mean, i.e. psi(z).
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            #raise NotImplementedError()
+            z = torch.randn(n, self.z_dim).to(device)
+            samples = self.decode(z).to('cpu')
             # ========================
         return samples
 
@@ -205,22 +205,18 @@ def vae_loss(x, xr, z_mu, z_log_sigma2, x_sigma2):
     #  2. You need to average over the batch dimension.
     # ====== YOUR CODE: ======
     # raise NotImplementedError()
-    # ========================
+    #turning both x and xr into vectors, keep the batch deep intact
+    x = x.view(x.shape[0], -1)
+    xr = xr.view(xr.shape[0], -1)
 
-    #turning both x and xr into vectors
-    x = x.view(x.size(0), -1)
-    xr = xr.view(xr.size(0), -1)
-
-    data_loss = (((x - xr) ** 2).sum(dim=1))
+    data_loss = nn.functional.mse_loss(x,xr) #take dx subtraction in considaration
     data_loss = data_loss / x_sigma2
 
-    kldiv_loss = z_log_sigma2.exp().sum(dim=1) + (z_mu ** 2).sum(dim=1) - z_mu.size(1) - z_log_sigma2.sum(dim=1)
+    kldiv_loss = z_log_sigma2.exp().sum(dim=1) + (z_mu ** 2).sum(dim=1) - z_mu.shape[1] - z_log_sigma2.sum(dim=1)
 
-    data_loss = data_loss.mean()
-    #normilizing as intructed
-    data_loss = data_loss / x.size(1)
     kldiv_loss = kldiv_loss.mean()
 
     loss = data_loss + kldiv_loss
+    # ========================
 
     return loss, data_loss, kldiv_loss

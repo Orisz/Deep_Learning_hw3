@@ -86,7 +86,13 @@ def part2_vae_hyperparams():
     )
     # TODO: Tweak the hyperparameters to generate a former president.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    #raise NotImplementedError()
+    hypers['batch_size']=64
+    hypers['h_dim']=256
+    hypers['z_dim']=16
+    hypers['x_sigma2']=0.2
+    hypers['learn_rate']=0.0005
+    hypers['betas']=(0.9,0.9)
     # ========================
     return hypers
 
@@ -95,25 +101,29 @@ part2_q1 = r"""
 **Your answer:**
 
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+The $\sigma^2$ determine the ratio between the data-loss and the KLD-loss. meaning controlls what loss we want to minimize more.
+For higher values the loss will be mostly determine by the KLD-loss, so we probably will get 'more random' images. For lower values,
+we will probably will start to over-fit. When experimenting with the hyperparams we saw that with smaller $\sigma^2$ we got faster to 'George Bush' images.
 
 """
 
 part2_q2 = r"""
 **Your answer:**
 
+ 1.Reconstruction loss:
+    The reconstruction loss purpose is to make the model to train from the given images.
+    This is wanted since we want our model to generate images similar to the ones in the dataset
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+    KL divergence loss:
+    The KL Div loss purpose is to try to make the latent space distribution to be close to some informative optimal distribution
+
+ 2.KL Div affects the latent space distribution by adjusting z_mu and z_sigma_2. 
+     When the model is not close enough to the normal N(0, I) distribution.
+
+3. We benefit from this method because the model learns the distribuion of the latent space(z) given some x from 
+     the distribution of x: p(x). I.e p(z|X=x).Considering that at first we didn't know anything about this distribuion
+     this is very surprising.
+ 
 
 """
 
