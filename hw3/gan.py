@@ -21,7 +21,31 @@ class Discriminator(nn.Module):
         #  You can then use either an affine layer or another conv layer to
         #  flatten the features.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        #raise NotImplementedError()
+        #implemantation of the paper is taken from the official PyTorch DCGAN tuturail:
+        # https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html
+        in_channels = self.in_size[0]
+        ndf = 64 # number discriminator features
+        self.discriminator = nn.Sequential(
+            # input is 3 x 64 x 64
+            nn.Conv2d(in_channels, ndf, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf) x 32 x 32
+            nn.Conv2d(64, ndf * 2, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(ndf * 2),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*2) x 16 x 16
+            nn.Conv2d(ndf * 2, ndf * 4, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(ndf * 4),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*4) x 8 x 8
+            nn.Conv2d(ndf * 4, ndf * 8, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(ndf * 8),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*8) x 4 x 4
+            nn.Conv2d(ndf * 8, 1, kernel_size=4, stride=1, padding=0, bias=False),
+            nn.Sigmoid()
+        )
         # ========================
 
     def forward(self, x):
@@ -34,7 +58,9 @@ class Discriminator(nn.Module):
         #  No need to apply sigmoid to obtain probability - we'll combine it
         #  with the loss due to improved numerical stability.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        #raise NotImplementedError()
+        y = self.discriminator(x)
+        y.squeeze_(0).squeeze_(0)
         # ========================
         return y
 
@@ -55,7 +81,30 @@ class Generator(nn.Module):
         #  section or implement something new.
         #  You can assume a fixed image size.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        #raise NotImplementedError()
+        ngf = 64 # number generator features 
+        self.generator = nn.Sequential(
+            # input is Z, going into a convolution
+            nn.ConvTranspose2d( z_dim, ngf * 8, kernel_size=4, stride=1, padding=0, bias=False),
+            nn.BatchNorm2d(ngf * 8),
+            nn.ReLU(True),
+            # state size. (ngf*8) x 4 x 4
+            nn.ConvTranspose2d(ngf * 8, ngf * 4, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(ngf * 4),
+            nn.ReLU(True),
+            # state size. (ngf*4) x 8 x 8
+            nn.ConvTranspose2d( ngf * 4, ngf * 2, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(ngf * 2),
+            nn.ReLU(True),
+            # state size. (ngf*2) x 16 x 16
+            nn.ConvTranspose2d( ngf * 2, ngf, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(ngf),
+            nn.ReLU(True),
+            # state size. (ngf) x 32 x 32
+            nn.ConvTranspose2d( ngf, out_channels, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.Tanh()
+            # state size. (out_channels) x 64 x 64
+        )
         # ========================
 
     def sample(self, n, with_grad=False):
@@ -72,7 +121,14 @@ class Generator(nn.Module):
         #  Generate n latent space samples and return their reconstructions.
         #  Don't use a loop.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        z = torch.randn(n, self.z_dim).to(device)
+        if with_grad:
+            samples = self.forward(z).to('cpu')
+        else:
+            with torch.no_grad():
+                samples = self.forward(z).to('cpu')
+            
+        #raise NotImplementedError()
         # ========================
         return samples
 
@@ -86,7 +142,9 @@ class Generator(nn.Module):
         #  Don't forget to make sure the output instances have the same
         #  dynamic range as the original (real) images.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        #raise NotImplementedError()
+        z.unsqueeze_(2).unsqueeze_(3)
+        x = self.generator(z)
         # ========================
         return x
 
