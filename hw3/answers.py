@@ -110,12 +110,13 @@ we will probably will start to over-fit. When experimenting with the hyperparams
 part2_q2 = r"""
 **Your answer:**
 
- 1.Reconstruction loss:
+ 1.
+ Reconstruction loss:
     The reconstruction loss purpose is to make the model to train from the given images.
-    This is wanted since we want our model to generate images similar to the ones in the dataset
-
-    KL divergence loss:
-    The KL Div loss purpose is to try to make the latent space distribution to be close to some informative optimal distribution
+    This is wanted since we want our model to generate images similar to the ones in the dataset.
+    
+KL divergence loss:
+    The KL Div loss purpose is to try to make the latent space distribution to be close to some           informative optimal distribution
 
  2.KL Div affects the latent space distribution by adjusting z_mu and z_sigma_2. 
      When the model is not close enough to the normal N(0, I) distribution.
