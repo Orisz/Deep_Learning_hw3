@@ -46,6 +46,7 @@ class Discriminator(nn.Module):
             nn.Conv2d(ndf * 8, 1, kernel_size=4, stride=1, padding=0, bias=False),
             nn.Sigmoid()
         )
+        self.loss = 1e3
         # ========================
 
     def forward(self, x):
@@ -59,6 +60,8 @@ class Discriminator(nn.Module):
         #  with the loss due to improved numerical stability.
         # ====== YOUR CODE: ======
         #raise NotImplementedError()
+        device = next(self.parameters()).device
+        x = x.to(device)
         y = self.discriminator(x)
         y.squeeze_(0).squeeze_(0)
         # ========================
@@ -105,6 +108,7 @@ class Generator(nn.Module):
             nn.Tanh()
             # state size. (out_channels) x 64 x 64
         )
+        self.loss = 1e3
         # ========================
 
     def sample(self, n, with_grad=False):
@@ -169,7 +173,27 @@ def discriminator_loss_fn(y_data, y_generated, data_label=0, label_noise=0.0):
     #  Implement the discriminator loss.
     #  See pytorch's BCEWithLogitsLoss for a numerically stable implementation.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    #raise NotImplementedError()
+    
+    # ***Data Loss***
+    # get desired uniform dist at [a,b] interval<=>
+    #      [datalabel - label_noise/2 , datalabel + label_noise/2]
+    b = label_noise / 2
+    a = -1*b
+    b+=data_label
+    a+=data_label
+    discrim_on_data_noised = torch.FloatTensor(y_data.shape).uniform_(a, b)
+    loss_data = F.binary_cross_entropy_with_logits(y_data, discrim_on_data_noised)
+    
+    # ***Generated Loss***
+    # get desired uniform dist at [c,d] interval<=>
+    #      [(1-datalabel) - label_noise/2 , (1-datalabel) + label_noise/2]
+    d = label_noise / 2
+    c = -1*d
+    d+=(1-data_label)
+    c+=(1-data_label)
+    discrim_on_gen_noised = torch.FloatTensor(y_generated.shape).uniform_(c, d) 
+    loss_generated = F.binary_cross_entropy_with_logits(y_generated, discrim_on_gen_noised)
     # ========================
     return loss_data + loss_generated
 
@@ -190,7 +214,10 @@ def generator_loss_fn(y_generated, data_label=0):
     #  Think about what you need to compare the input to, in order to
     #  formulate the loss in terms of Binary Cross Entropy.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    #raise NotImplementedError()
+    # as written no need for noising the labels
+    target  = torch.zeros(y_generated.shape) + data_label
+    loss = F.binary_cross_entropy_with_logits(y_generated, target)
     # ========================
     return loss
 
@@ -210,7 +237,19 @@ def train_batch(dsc_model: Discriminator, gen_model: Generator,
     #  2. Calculate discriminator loss
     #  3. Update discriminator parameters
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    #raise NotImplementedError()
+    
+    #generate artificial data
+    generated_data = gen_model.sample(x_data.shape[0], with_grad=False)
+    
+    # classify both artificial and real data
+    y_on_data = dsc_model(x_data)
+    y_on_gen = dsc_model(generated_data)
+    # calc loss & backprop
+    dsc_optimizer.zero_grad()
+    dsc_loss = dsc_loss_fn(y_on_data, y_on_gen)
+    dsc_loss.backward()
+    dsc_optimizer.step()
     # ========================
 
     # TODO: Generator update
@@ -218,7 +257,19 @@ def train_batch(dsc_model: Discriminator, gen_model: Generator,
     #  2. Calculate generator loss
     #  3. Update generator parameters
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    #raise NotImplementedError()
+    
+    #generate artificial data !this time should track gradients!
+    generated_data = gen_model.sample(x_data.shape[0], with_grad=True)
+    
+    # classify artificial and data
+    y_on_gen = dsc_model(generated_data)
+    
+    # calc loss & backprop
+    gen_optimizer.zero_grad()
+    gen_loss = gen_loss_fn(y_on_gen)
+    gen_loss.backward()
+    gen_optimizer.step()
     # ========================
 
     return dsc_loss.item(), gen_loss.item()
@@ -241,7 +292,14 @@ def save_checkpoint(gen_model, dsc_losses, gen_losses, checkpoint_file):
     #  You should decide what logic to use for deciding when to save.
     #  If you save, set saved to True.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    #raise NotImplementedError()
+    if gen_model.loss > gen_losses:
+        gen_model.loss = gen_losses
+        saved = True
+    if saved and checkpoint_file is not None:
+                saved_state = gen_model.state_dict()
+                torch.save(saved_state, checkpoint_file)
+                print(f'*** Saved checkpoint {checkpoint_file}')
     # ========================
 
     return saved
