@@ -46,7 +46,6 @@ class Discriminator(nn.Module):
             nn.Conv2d(ndf * 8, 1, kernel_size=4, stride=1, padding=0, bias=False),
             nn.Sigmoid()
         )
-        self.loss = 1e3
         # ========================
 
     def forward(self, x):
@@ -60,10 +59,8 @@ class Discriminator(nn.Module):
         #  with the loss due to improved numerical stability.
         # ====== YOUR CODE: ======
         #raise NotImplementedError()
-        device = next(self.parameters()).device
-        x = x.to(device)
         y = self.discriminator(x)
-        y.squeeze_(0).squeeze_(0)
+        y = y.view(y.shape[0], -1)
         # ========================
         return y
 
@@ -108,7 +105,6 @@ class Generator(nn.Module):
             nn.Tanh()
             # state size. (out_channels) x 64 x 64
         )
-        self.loss = 1e3
         # ========================
 
     def sample(self, n, with_grad=False):
@@ -127,10 +123,10 @@ class Generator(nn.Module):
         # ====== YOUR CODE: ======
         z = torch.randn(n, self.z_dim).to(device)
         if with_grad:
-            samples = self.forward(z).to('cpu')
+            samples = self.forward(z)
         else:
             with torch.no_grad():
-                samples = self.forward(z).to('cpu')
+                samples = self.forward(z)
             
         #raise NotImplementedError()
         # ========================
@@ -147,7 +143,7 @@ class Generator(nn.Module):
         #  dynamic range as the original (real) images.
         # ====== YOUR CODE: ======
         #raise NotImplementedError()
-        z.unsqueeze_(2).unsqueeze_(3)
+        z = z.unsqueeze(2).unsqueeze(3)
         x = self.generator(z)
         # ========================
         return x
@@ -183,7 +179,7 @@ def discriminator_loss_fn(y_data, y_generated, data_label=0, label_noise=0.0):
     b+=data_label
     a+=data_label
     discrim_on_data_noised = torch.FloatTensor(y_data.shape).uniform_(a, b)
-    loss_data = F.binary_cross_entropy_with_logits(y_data, discrim_on_data_noised)
+    loss_data = F.binary_cross_entropy_with_logits(y_data, discrim_on_data_noised.to(y_data.device))
     
     # ***Generated Loss***
     # get desired uniform dist at [c,d] interval<=>
@@ -193,7 +189,7 @@ def discriminator_loss_fn(y_data, y_generated, data_label=0, label_noise=0.0):
     d+=(1-data_label)
     c+=(1-data_label)
     discrim_on_gen_noised = torch.FloatTensor(y_generated.shape).uniform_(c, d) 
-    loss_generated = F.binary_cross_entropy_with_logits(y_generated, discrim_on_gen_noised)
+    loss_generated = F.binary_cross_entropy_with_logits(y_generated, discrim_on_gen_noised.to(y_generated.device))
     # ========================
     return loss_data + loss_generated
 
@@ -217,7 +213,7 @@ def generator_loss_fn(y_generated, data_label=0):
     #raise NotImplementedError()
     # as written no need for noising the labels
     target  = torch.zeros(y_generated.shape) + data_label
-    loss = F.binary_cross_entropy_with_logits(y_generated, target)
+    loss = F.binary_cross_entropy_with_logits(y_generated, target.to(y_generated.device))
     # ========================
     return loss
 
@@ -293,12 +289,13 @@ def save_checkpoint(gen_model, dsc_losses, gen_losses, checkpoint_file):
     #  If you save, set saved to True.
     # ====== YOUR CODE: ======
     #raise NotImplementedError()
-    if gen_model.loss > gen_losses:
-        gen_model.loss = gen_losses
-        saved = True
+    if len(gen_losses) < 2:
+        return saved
+#     if dsc_losses[-1] > max(dsc_losses) or gen_losses[-1] < min(gen_losses):
+#         saved = True
+    saved = True
     if saved and checkpoint_file is not None:
-                saved_state = gen_model.state_dict()
-                torch.save(saved_state, checkpoint_file)
+                torch.save(gen_model, checkpoint_file)
                 print(f'*** Saved checkpoint {checkpoint_file}')
     # ========================
 
