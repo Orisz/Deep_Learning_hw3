@@ -155,58 +155,44 @@ def part3_gan_hyperparams():
     # ====== YOUR CODE: ======
     #raise NotImplementedError()
     hypers['batch_size']=32
-    hypers['z_dim']=64
+    hypers['z_dim']=100
     hypers['data_label']=1
-    hypers['label_noise']=0.4
+    hypers['label_noise']=0.3
     hypers['discriminator_optimizer']['type']='Adam'
-    hypers['discriminator_optimizer']['weight_decay']=0.002
+    hypers['discriminator_optimizer']['weight_decay']=0.01
     hypers['discriminator_optimizer']['betas']=(0.5, 0.999)
-    hypers['discriminator_optimizer']['lr']=0.0002
+    hypers['discriminator_optimizer']['lr']=0.002
     hypers['generator_optimizer']['type']='Adam'
-    hypers['generator_optimizer']['weight_decay']=0.002
-    hypers['generator_optimizer']['betas']=(0.5, 0.999)
+    hypers['generator_optimizer']['weight_decay']=0.01
+    hypers['generator_optimizer']['betas']=(0.3, 0.999)
     hypers['generator_optimizer']['lr']=0.0002
     # ========================
     return hypers
 
 
 part3_q1 = r"""
-**Your answer:**
-
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+While training we do the following: When we update the discriminator params we do so by showing him real data and generated data. The genetrated data comes from the generator. But we are optimizing the discriminator now so we don't need to take in considaration the generator params. The generator params are those who got us the generated data so we need to generate the data 'with no grad', otherwise the generator params will also be updated.
+On the other hand when optimizing the generator we would like to optimize him by examining the discriminator answer for the generated data. So obviously if the generator wants to get better we should generate the data 'with grad'.
 
 """
 
 part3_q2 = r"""
-**Your answer:**
+1)
+This assumption is compeletely wrong. What makes GAN unique is that the two CNNs are competing with each other. If the Generator loss is below some thresh it means that he is generating good images *with respect to the current discriminator state*. I.e. if the discriminator is currently has poor preformance then low generator loss means nothing at all. we would like low Generator loss when the Discriminator is already very good at his job.
+To sum up both losses are important because we want both G and D to get better.
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+2)
+It means that while the generator learns to generate more images that 'fool' the discriminator, the discriminator is experiancing some 'trade off'. E.g he was fooled more by Generator but he leanred to give more correct answers regarding the real data.
 
 """
 
 part3_q3 = r"""
-**Your answer:**
+The biggest advantage of VAEs is the probabilistic formulation they come with as a result of maximizing a lower bound on the log-likelihood. Maximizing this distribution  seems to have some "blurring" effect on images or may be some averaging. We notice how we lose fine featrues as the tie arount his neck or the background.
 
+The advantage of GANs is they are better at generating visual features which suggest that adversarial loss is better than mean-squared loss.
+We noticed how during the training each epoch seems to capture different features such as the tie, eyes details, backgroud details, delicate face fetures such as pose shading etc.
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
-
+So as we can see to loss means the world when trying to train generative model.
 """
 
 # ==============

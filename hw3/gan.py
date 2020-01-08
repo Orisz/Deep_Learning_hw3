@@ -46,6 +46,12 @@ class Discriminator(nn.Module):
             nn.Conv2d(ndf * 8, 1, kernel_size=4, stride=1, padding=0, bias=False),
             nn.Sigmoid()
         )
+        for m in self.discriminator:
+            if isinstance(m, nn.Conv2d):
+                nn.init.normal_(m.weight.data, 0.0, 0.02)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.normal_(m.weight.data, 1.0, 0.02)
+                nn.init.constant_(m.bias.data, 0)         
         # ========================
 
     def forward(self, x):
@@ -105,6 +111,17 @@ class Generator(nn.Module):
             nn.Tanh()
             # state size. (out_channels) x 64 x 64
         )
+        for m in self.generator:
+            if isinstance(m, nn.Conv2d):
+                nn.init.normal_(m.weight.data, 0.0, 0.02)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.normal_(m.weight.data, 1.0, 0.02)
+                nn.init.constant_(m.bias.data, 0)       
+#         if self.generator.find('Conv') != -1:
+#             nn.init.normal_(m.weight.data, 0.0, 0.02)
+#         elif self.generator.find('BatchNorm') != -1:
+#             nn.init.normal_(m.weight.data, 1.0, 0.02)
+#             nn.init.constant_(m.bias.data, 0)
         # ========================
 
     def sample(self, n, with_grad=False):
