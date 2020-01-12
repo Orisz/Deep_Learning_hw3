@@ -101,9 +101,9 @@ part2_q1 = r"""
 **Your answer:**
 
 
-The $\sigma^2$ determine the ratio between the data-loss and the KLD-loss. meaning controlls what loss we want to minimize more.
+The $\sigma^2$ determine the effect of the reconstruction loss. If the $\sigma^2$ is very big than it means that we don't care so much about the loss coming from the reconstruction loss part(and vice versa).
 For higher values the loss will be mostly determine by the KLD-loss, so we probably will get 'more random' images. For lower values,
-we will probably will start to over-fit. When experimenting with the hyperparams we saw that with smaller $\sigma^2$ we got faster to 'George Bush' images.
+we will probably start to over-fit. When experimenting with the hyperparams we saw that with smaller $\sigma^2$ we got faster to 'George Bush' images.
 
 """
 
@@ -116,14 +116,12 @@ part2_q2 = r"""
     This is wanted since we want our model to generate images similar to the ones in the dataset.
     
 KL divergence loss:
-    The KL Div loss purpose is to try to make the latent space distribution to be close to some           informative optimal distribution
+    The KL Div loss purpose is to try to make the latent space distribution to be as close to some           known informative optimal distribution(such as Gaussian)
 
  2.KL Div affects the latent space distribution by adjusting z_mu and z_sigma_2. 
-     When the model is not close enough to the normal N(0, I) distribution.
+     When the model is not close enough to the normal $\mathcal{N}(\bb{0},\bb{I})$ distribution.
 
-3. We benefit from this method because the model learns the distribuion of the latent space(z) given some x from 
-     the distribution of x: p(x). I.e p(z|X=x).Considering that at first we didn't know anything about this distribuion
-     this is very surprising.
+3.If the DKL part wasn't there this was just a simple auto encoder. The DKL term 'punish us', when optimizing, if the posterior - p(z|x) becomes 'to far' from the gaussian p(z). Once understanding this we realize that we are now able to use the model as Gnerative model by sampling from the latent space 'z' and then push it through the decoder.
  
 
 """
